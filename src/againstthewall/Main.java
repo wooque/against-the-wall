@@ -17,6 +17,7 @@ public class Main extends JPanel implements Runnable {
     boolean init;
     Point2D.Double stars[];
     Rectangle2D.Double bricks[];
+    Color bricksColors[];
     Dimension dim;
     
     public void init() {
@@ -26,15 +27,21 @@ public class Main extends JPanel implements Runnable {
             for (int i = 0; i < 100; i++) {
                 stars[i] = new Point2D.Double(Math.random() * dim.width, Math.random() * dim.height);
             }
-            
-            double wallBegin = dim.height * 0.2;
-            double wallEnd = dim.height * 0.5;
+
+        	double wallLine = dim.height * 0.1;
+        	double brickWidth = dim.width / 10;
+        	double brickHeigth = dim.height * 0.1;
             
             bricks = new Rectangle2D.Double[40];
+            bricksColors = new Color[40];
             for (int i = 0; i < 4; i++) {
+            	
                 for (int j = 0; j < 10; j++) {
-                    bricks[i * 10 + j] = new Rectangle2D.Double();
+                    bricks[i * 10 + j] = new Rectangle2D.Double(j * (dim.width / 10), wallLine, brickWidth, brickHeigth);
+                    bricksColors[i * 10 + j] = new Color((int)(Math.random() * 256), (int)(Math.random() * 256), (int)(Math.random() * 256));
                 }
+                
+                wallLine += dim.height * 0.1;
             }
             init = true;
         }
@@ -51,6 +58,10 @@ public class Main extends JPanel implements Runnable {
             g2d.setColor(Color.WHITE);
             for (int i = 0; i < 100; i++) {
                 g2d.fillRect((int)stars[i].x, (int)stars[i].y, 1, 1);
+            }
+            for (int i = 0; i < 40; i++) {
+                g2d.setPaint(bricksColors[i]);
+            	g2d.fill(bricks[i]);
             }
         }
     }
