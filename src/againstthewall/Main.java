@@ -14,10 +14,12 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.geom.AffineTransform;
+import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.awt.geom.Ellipse2D;
 import java.util.ArrayList;
+import java.util.LinkedList;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
@@ -56,7 +58,9 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
     public static final class Ball {
         
         public Point2D.Double center;
+        public final LinkedList<Point2D.Double> ballCenterHistory;
         public final double radius;
+        public final Ellipse2D.Double dimension;
         public Point2D.Double velocity;
         public double angle;
         public final double rotationVelocity;
@@ -64,7 +68,9 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
         
         public Ball(final Point2D.Double center, double radius, final Point2D.Double velocity, double rotationVelocity, final Paint color) {
             this.center = center;
+            this.ballCenterHistory = new LinkedList<Point2D.Double>();
             this.radius = radius;
+            this.dimension = new Ellipse2D.Double(-radius/2, -radius/2, radius, radius);
             this.velocity = velocity;
             this.angle = 0;
             this.rotationVelocity = rotationVelocity;
@@ -72,19 +78,29 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
         }
     }
     
+    public static class Star {
+        public Point2D.Double position;
+        public double velocity;
+        
+        public Star(final Point2D.Double position, double velocity) {
+            this.position = position;
+            this.velocity = velocity;
+        }
+    }
+    
     public static class Sky {
         public final Color color;
         public final Color starColor;
         public final Ellipse2D.Double starShape;
-        public final ArrayList<Point2D.Double> stars;
+        public final ArrayList<Star> stars;
         
         public Sky(final Color color, final Color starColor, final Ellipse2D.Double starShape, int numberOfStars) {
             this.color = color;
             this.starColor = starColor;
             this.starShape = starShape;
-            this.stars = new ArrayList<Point2D.Double>();
+            this.stars = new ArrayList<Star>();
             for (int i = 0; i < numberOfStars; i++) {
-                stars.add(new Point2D.Double(Math.random(), Math.random()));
+                stars.add(new Star(new Point2D.Double(Math.random(), Math.random()), 0.001*Math.random()));
             }
         }
     }
@@ -164,15 +180,15 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
     }
     
     public static Game initGame() {
-        Sky sky = new Sky(Color.BLACK, Color.WHITE, new Ellipse2D.Double(0, 0, 1.0/250.0, 1.0/250.0), 200);
+        Sky sky = new Sky(new Color(0x11110e), Color.WHITE, new Ellipse2D.Double(0, 0, 1.0/250.0, 1.0/250.0), 100);
         Wall wall = new Wall(5, 10, 0.1, 0.5);
         
         ArrayList<Color> rowColors = new ArrayList<Color>();
-        rowColors.add(Color.RED);
-        rowColors.add(Color.YELLOW);
-        rowColors.add(Color.BLUE);
-        rowColors.add(Color.GREEN);
-        rowColors.add(Color.CYAN);
+        rowColors.add(new Color(0xff6961));
+        rowColors.add(new Color(0xfdfd96));
+        rowColors.add(new Color(0x77dd77));
+        rowColors.add(new Color(0xaec6cf));
+        rowColors.add(new Color(0xb39eb5));
         
         Color brickEdgeColor = Color.BLACK;
         Stroke brickEdgeStroke = new BasicStroke(1f/50f * (float)(wall.height/wall.rows));
@@ -184,14 +200,15 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
         double ballRadius = 1.0/40.0;
         Point2D.Double ballDimension = new Point2D.Double(0.5, 1 - padHeight - ballRadius/2);
         Point2D.Double ballVelocity = new Point2D.Double(0, 0);
-        Paint ballColor = new GradientPaint(0, 0, Color.RED, (float)ballRadius, (float)ballRadius, Color.YELLOW);
-        Ball ball = new Ball(ballDimension, ballRadius, ballVelocity, 0.01, ballColor);
+        Paint ballColor = new GradientPaint((float)(-ballRadius/2), (float)(-ballRadius/2),
+                                            new Color(0xff6961), (float)ballRadius, (float)ballRadius, new Color(0xfdfd96));
+        Ball ball = new Ball(ballDimension, ballRadius, ballVelocity, 0.1, ballColor);
         
         return new Game(sky, wall, rowColors, brickEdgeColor, brickEdgeStroke, pad, ball);
     }
     
     public static final Point2D.Double BALL_START_VELOCITY = new Point2D.Double(0.005, -0.01);
-    public static final double RANGE = 0.00005;
+    public static final double RANGE = 0.001;
     
     public static boolean inRange(double x, double barrier1, double barrier2) {
         
@@ -336,6 +353,9 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
             
         Point2D.Double newBallCenter;  
         newBallCenter = add(game.ball.center, scale(game.ball.velocity, time));
+        game.ball.ballCenterHistory.add(game.ball.center);
+        if (game.ball.ballCenterHistory.size() > 100)
+            game.ball.ballCenterHistory.pop();
         game.ball.center = newBallCenter;
         
         if (game.ball.center.y + game.ball.radius/2 >= 1) {
@@ -346,6 +366,13 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
 
         game.ball.angle += game.ball.rotationVelocity * time;
         game.ball.angle %= 2 * Math.PI;
+        
+        for (Star star: game.sky.stars) {
+            star.position.x += star.velocity * time;
+            if (star.position.x >= 1.0) {
+                star.position.x = 0.0;
+            }
+        }
              
         Point2D.Double result = checkForCollision(game.ball, game.edge);
         if (result != null) {
@@ -371,6 +398,11 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
                     }
                     break;
                 }
+            } else {
+               brick.dimension.x += 0.001;
+               brick.dimension.y += 0.001;
+               brick.dimension.height -= 0.002;
+               brick.dimension.width -= 0.002;
             }
         }
     }
@@ -399,7 +431,6 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
         g2d.setPaint(game.sky.color);
         g2d.fillRect(0, 0, dim.width, dim.height);
         
-        // TODO extract constants
         if(!game.gameOver) {
             g2d.setPaint(Color.WHITE);
             g2d.drawString("Score: " + game.score, 0, g2d.getFontMetrics().getHeight());
@@ -407,23 +438,21 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
 
         resetDrawingArea(g2d, dim);
         g2d.setPaint(game.sky.starColor);
-        for (Point2D.Double star : game.sky.stars) {
+        for (Star star : game.sky.stars) {
             resetDrawingArea(g2d, dim);
-            g2d.translate(star.x, star.y);
+            g2d.translate(star.position.x, star.position.y);
             g2d.fill(game.sky.starShape);
         }
 
         if (!game.gameOver) {
             
             for (Brick brick: game.bricks) {
-                if (brick.isActive) {
-                    resetDrawingArea(g2d, dim);
-                    g2d.setPaint(brick.color);
-                    g2d.fill(brick.dimension);
-                    g2d.setPaint(Brick.edgeColor);
-                    g2d.setStroke(Brick.edgeStroke);
-                    g2d.draw(brick.dimension);
-                }
+                resetDrawingArea(g2d, dim);
+                g2d.setPaint(brick.color);
+                g2d.fill(brick.dimension);
+                g2d.setPaint(Brick.edgeColor);
+                g2d.setStroke(Brick.edgeStroke);
+                g2d.draw(brick.dimension);
             }
 
             resetDrawingArea(g2d, dim);
@@ -431,13 +460,21 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
             g2d.fill(game.pad.dimension);
     
             resetDrawingArea(g2d, dim);
+            for (int i = 0; i < game.ball.ballCenterHistory.size() - 1; i++) {
+                g2d.setStroke(new BasicStroke((float)(0.8*game.ball.radius)));
+                g2d.setPaint(new Color(1.0f, 1.0f, 1.0f, (float)(0.25*i/game.ball.ballCenterHistory.size())));
+                g2d.draw(new Line2D.Double(game.ball.ballCenterHistory.get(i), game.ball.ballCenterHistory.get(i+1)));
+            }
+            
+            resetDrawingArea(g2d, dim);
             g2d.setPaint(game.ball.color);
-            g2d.fill(new Ellipse2D.Double(game.ball.center.x - game.ball.radius/2, game.ball.center.y - game.ball.radius/2,
-                                          game.ball.radius, game.ball.radius));
+            g2d.translate(game.ball.center.x, game.ball.center.y);
+            g2d.rotate(game.ball.angle);
+            g2d.fill(game.ball.dimension);         
+            
         } else {
             
             resetDrawingArea(g2d, dim);
-            // TODO extract constants
             g2d.translate(0.2, 0.3);
             g2d.scale(5.0/dim.width, 5.0/dim.height);
             g2d.setPaint(Color.WHITE);
