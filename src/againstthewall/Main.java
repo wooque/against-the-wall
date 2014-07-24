@@ -8,7 +8,6 @@ import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Paint;
-import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.Stroke;
 import java.awt.event.MouseEvent;
@@ -29,8 +28,8 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
 
     public static final class Brick {
 
-        public final Rectangle.Double dimension;
-        // TODO: do this without mutabiliy
+        public final Rectangle2D.Double dimension;
+        public final ArrayList<Point2D.Double> points;
         public boolean isActive;
         public final Color color;
         
@@ -39,6 +38,11 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
 
         public Brick(final Rectangle2D.Double dimension, final Color color) {
             this.dimension = dimension;
+            this.points = new ArrayList<Point2D.Double>();
+            this.points.add(new Point2D.Double(dimension.x, dimension.y));
+            this.points.add(new Point2D.Double(dimension.x + dimension.width, dimension.y));
+            this.points.add(new Point2D.Double(dimension.x + dimension.width, dimension.y + dimension.height));
+            this.points.add(new Point2D.Double(dimension.x, dimension.y + dimension.height));
             this.color = color;
             this.isActive = true;
         }
@@ -49,33 +53,11 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
         }
     }
     
-    public static final class HorizontalSide {
-        public final Point2D.Double leftPoint;
-        public final double width;
-        
-        public HorizontalSide(final Point2D.Double leftPoint, double width) {
-            this.leftPoint = leftPoint;
-            this.width = width;
-        }
-    }
-    
-    public static final class VerticalSide {
-        public final Point2D.Double upPoint;
-        public final double height;
-        
-        public VerticalSide(final Point2D.Double upPoint, double height) {
-            this.upPoint = upPoint;
-            this.height = height;
-        }
-    }
-    
     public static final class Ball {
         
-        // TODO: do this without mutability
         public Point2D.Double center;
         public final double radius;
-        public final Point2D.Double velocity;
-        // TODO: see to do this without mutability
+        public Point2D.Double velocity;
         public double angle;
         public final double rotationVelocity;
         public final Paint color;
@@ -87,17 +69,6 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
             this.angle = 0;
             this.rotationVelocity = rotationVelocity;
             this.color = color;
-        }
-    }
-    
-    public static final class CollisionResult {
-        
-        public final Point2D.Double ballVelocity;
-        public final boolean isCollided;
-        
-        public CollisionResult(final Point2D.Double ballVelocity, boolean isCollided) {
-            this.ballVelocity = ballVelocity;
-            this.isCollided = isCollided;
         }
     }
     
@@ -152,10 +123,16 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
     
     public static final class Pad {
         public final Rectangle2D.Double dimension;
+        public final ArrayList<Point2D.Double> points;
         public final Color color;
         
         public Pad(final Rectangle2D.Double dimension, final Color color) {
             this.dimension = dimension;
+            this.points = new ArrayList<Point2D.Double>();
+            this.points.add(new Point2D.Double(dimension.x, dimension.y));
+            this.points.add(new Point2D.Double(dimension.x + dimension.width, dimension.y));
+            this.points.add(new Point2D.Double(dimension.x + dimension.width, dimension.y + dimension.height));
+            this.points.add(new Point2D.Double(dimension.x, dimension.y + dimension.height));
             this.color = color;
         }
     }
@@ -165,7 +142,7 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
         public final ArrayList<Brick> bricks;
         public final Pad pad;
         public final Ball ball;
-        // TODO: do this without mutability
+        public final ArrayList<Point2D.Double> edge;
         public boolean gameOver;
         public int score;
         
@@ -176,6 +153,11 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
             Brick.initEdge(brickEdgeColor, brickEdgeStroke);
             this.pad = pad;
             this.ball = ball;
+            this.edge = new ArrayList<Point2D.Double>();
+            this.edge.add(new Point2D.Double(0, 0));
+            this.edge.add(new Point2D.Double(1, 0));
+            this.edge.add(new Point2D.Double(1, 1));
+            this.edge.add(new Point2D.Double(0, 1));
             this.gameOver = false;
             this.score = 0;
         }
@@ -201,25 +183,38 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
         
         double ballRadius = 1.0/40.0;
         Point2D.Double ballDimension = new Point2D.Double(0.5, 1 - padHeight - ballRadius/2);
-        Point2D.Double ballVelocity = new Point2D.Double(0.01, -0.02);
+        Point2D.Double ballVelocity = new Point2D.Double(0, 0);
         Paint ballColor = new GradientPaint(0, 0, Color.RED, (float)ballRadius, (float)ballRadius, Color.YELLOW);
         Ball ball = new Ball(ballDimension, ballRadius, ballVelocity, 0.01, ballColor);
         
         return new Game(sky, wall, rowColors, brickEdgeColor, brickEdgeStroke, pad, ball);
     }
     
-    public static final double RANGE = 0.0005;
+    public static final Point2D.Double BALL_START_VELOCITY = new Point2D.Double(0.005, -0.01);
+    public static final double RANGE = 0.00005;
     
-    public static boolean inRange(double x, double lower, double higher) {
-        return (higher > lower) && (x >= lower) && (x <= higher);
-    }
-
-    public static boolean grOrEq(double a, double b, double range) {
-        return inRange(a, b, b + range);
+    public static boolean inRange(double x, double barrier1, double barrier2) {
+        
+        double high;
+        double low;
+        
+        if (barrier1 > barrier2) {
+            high = barrier1;
+            low = barrier2;
+        } else {
+            high = barrier2;
+            low = barrier1;
+        }
+        
+        return (x >= low) && (x <= high);
     }
     
-    public static boolean lsOrEq(double a, double b, double range) {
-        return inRange(a, b - range, b);
+    public static boolean Eq(double a, double b, double range) {
+        return inRange(a, b - range/2, b + range/2);
+    }
+    
+    public static double distance(double x, double y) {
+        return Math.abs(x - y);
     }
     
     public static double distance(double x1, double y1, double x2, double y2) {
@@ -275,92 +270,63 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
         return bounce(ball.velocity, n);
     }
     
-    public static CollisionResult checkAndCollideEdge(final Ball ball, final Point2D.Double edge) {
+    public static Point2D.Double checkAndCollideEdge(final Ball ball, final Point2D.Double edge) {
         
-        boolean isCollided = lsOrEq(distance(ball.center, edge), ball.radius/2, RANGE);
-        Point2D.Double newBallVelocity = isCollided? collide(ball, edge): ball.velocity;
-        return new CollisionResult(newBallVelocity, isCollided);
+        boolean isCollided = Eq(distance(ball.center, edge), ball.radius/2, RANGE);
+        if (isCollided) {
+            return collide(ball, edge);
+        } else {
+            return null;
+        }
     }
     
-    public static CollisionResult checkAndCollideUpSide(final Ball ball, final HorizontalSide upSide) {
+    public static Point2D.Double checkAndCollideSide(final Ball ball, final Point2D.Double a, final Point2D.Double b) {
         
-        boolean isCollided = (grOrEq(ball.center.y + ball.radius/2, upSide.leftPoint.y, RANGE)
-                            && ball.center.x >= upSide.leftPoint.x && ball.center.x <= upSide.leftPoint.x + upSide.width);
+        if (a.y == b.y) {
+            
+            boolean isCollided = (Eq(distance(ball.center.y, a.y), ball.radius/2, RANGE)
+                                  && inRange(ball.center.x, a.x, b.x));
 
-       Point2D.Double newBallVelocity = isCollided? new Point2D.Double(ball.velocity.x, -ball.velocity.y): ball.velocity;
-       return new CollisionResult(newBallVelocity, isCollided);
-    }
-    
-    public static CollisionResult checkAndCollideDownSide(final Ball ball, final HorizontalSide downSide) {
-        
-        boolean isCollided = (lsOrEq(ball.center.y - ball.radius/2, downSide.leftPoint.y + downSide.width, RANGE)
-                            && ball.center.x >= downSide.leftPoint.x && ball.center.x <= downSide.leftPoint.x + downSide.width);
+            if (isCollided) {
+                return new Point2D.Double(ball.velocity.x, -ball.velocity.y);
+            } else {
+                return null;
+            }
+            
+        } else if (a.x == b.x) {
+            
+            boolean isCollided = (Eq(distance(ball.center.x, a.x), ball.radius/2, RANGE)
+                                  && inRange(ball.center.y, a.y, b.y));
 
-       Point2D.Double newBallVelocity = isCollided? new Point2D.Double(ball.velocity.x, -ball.velocity.y): ball.velocity;
-       return new CollisionResult(newBallVelocity, isCollided);
+            if (isCollided) {
+                return new Point2D.Double(-ball.velocity.x, ball.velocity.y);
+            } else {
+                return null;
+            }
+            
+        } else {
+            System.err.print("Collision with slopes are not implemeted");
+            return null;
+        }
     }
     
-    public static CollisionResult checkAndCollideLeftSide(final Ball ball, final VerticalSide leftSide) {
+    private Point2D.Double checkForCollision(Ball ball, ArrayList<Point2D.Double> points) {
         
-        boolean isCollided = (grOrEq(ball.center.x + ball.radius/2, leftSide.upPoint.x, RANGE)
-                            && ball.center.y >= leftSide.upPoint.y && ball.center.y <= leftSide.upPoint.y + leftSide.height);
-
-       Point2D.Double newBallVelocity = isCollided? new Point2D.Double(-ball.velocity.x, ball.velocity.y): ball.velocity;
-       return new CollisionResult(newBallVelocity, isCollided);
-    }
-    
-    public static CollisionResult checkAndCollideRightSide(final Ball ball, final VerticalSide rightSide) {
+        for (Point2D.Double point: points) {
+            Point2D.Double result = checkAndCollideEdge(ball, point);
+            if (result != null) {
+                return result;
+            }
+        }     
         
-        boolean isCollided = (lsOrEq(ball.center.x - ball.radius/2, rightSide.upPoint.x + rightSide.height, RANGE)
-                            && ball.center.y >= rightSide.upPoint.y && ball.center.y <= rightSide.upPoint.y + rightSide.height);
-
-       Point2D.Double newBallVelocity = isCollided? new Point2D.Double(-ball.velocity.x, ball.velocity.y): ball.velocity;
-       return new CollisionResult(newBallVelocity, isCollided);
-    }
-    
-    private CollisionResult checkForCollision(Ball ball, Rectangle2D.Double brick) {
-        
-        CollisionResult result = checkAndCollideEdge(ball, new Point2D.Double(brick.x, brick.y));
-        if (result.isCollided) {
-            return result;
+        for (int i = 0; i < points.size(); i++) {
+            Point2D.Double result = checkAndCollideSide(ball, points.get(i), points.get((i + 1) % points.size()));
+            if (result != null) {
+                return result;
+            }
         }
         
-        result = checkAndCollideEdge(ball, new Point2D.Double(brick.x + brick.width, brick.y));
-        if (result.isCollided) {
-            return result;
-        }
-        
-        result = checkAndCollideEdge(ball, new Point2D.Double(brick.x, brick.y + brick.width));
-        if (result.isCollided) {
-            return result;
-        }
-        
-        result = checkAndCollideEdge(ball, new Point2D.Double(brick.x + brick.width, brick.y + brick.width));
-        if (result.isCollided) {
-            return result;
-        }
-        
-        result = checkAndCollideUpSide(ball, new HorizontalSide(new Point2D.Double(brick.x, brick.y), brick.width));
-        if (result.isCollided) {
-            return result;
-        }
-        
-        result = checkAndCollideDownSide(ball, new HorizontalSide(new Point2D.Double(brick.x, brick.y + brick.height), brick.width));
-        if (result.isCollided) {
-            return result;
-        }
-        
-        result = checkAndCollideLeftSide(ball, new VerticalSide(new Point2D.Double(brick.x, brick.y), brick.height));
-        if (result.isCollided) {
-            return result;
-        }
-        
-        result = checkAndCollideLeftSide(ball, new VerticalSide(new Point2D.Double(brick.x + brick.width, brick.y), brick.height));
-        if (result.isCollided) {
-            return result;
-        }
-        
-        return new CollisionResult(ball.velocity, false);
+        return null;
     }
 
     private void passTime(Game game, double time) {
@@ -371,53 +337,33 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
         Point2D.Double newBallCenter;  
         newBallCenter = add(game.ball.center, scale(game.ball.velocity, time));
         game.ball.center = newBallCenter;
-           
-        // TODO: do this without mutability
+        
+        if (game.ball.center.y + game.ball.radius/2 >= 1) {
+            game.gameOver = true;
+            game.ball.velocity = new Point2D.Double(0, 0);
+            return;
+        }
+
         game.ball.angle += game.ball.rotationVelocity * time;
         game.ball.angle %= 2 * Math.PI;
-        
-        CollisionResult result = checkAndCollideLeftSide(game.ball, new VerticalSide(new Point2D.Double(1, 0), 1));
-        if (result.isCollided) {
+             
+        Point2D.Double result = checkForCollision(game.ball, game.edge);
+        if (result != null) {
+            game.ball.velocity = result;
             return;
         }
         
-        result = checkAndCollideRightSide(game.ball, new VerticalSide(new Point2D.Double(0, 0), 1));
-        if (result.isCollided) {
+        result = checkForCollision(game.ball, game.pad.points);
+        if(result != null) {
+            game.ball.velocity = result;
             return;
         }
-        
-        result = checkAndCollideDownSide(game.ball, new HorizontalSide(new Point2D.Double(0, 0), 1));
-        if (result.isCollided) {
-            return;
-        }
-        
-        result = checkAndCollideUpSide(game.ball, new HorizontalSide(new Point2D.Double(0, 1), game.pad.dimension.x));
-        if (result.isCollided) {
-            return;
-        }
-        
-        result = checkAndCollideUpSide(game.ball, new HorizontalSide(new Point2D.Double(0, 1), game.pad.dimension.x));
-        if (result.isCollided) {
-            return;
-        }
-        
-        double rightPadSide = game.pad.dimension.x + game.pad.dimension.width;
-        double rightPadSideToRightScreenSide = 1 - rightPadSide;
-        result = checkAndCollideUpSide(game.ball, new HorizontalSide(new Point2D.Double(rightPadSide, 1), rightPadSideToRightScreenSide));
-        if (result.isCollided) {
-            return;
-        }
-            
-        result = checkForCollision(game.ball, game.pad.dimension);
-        if(result.isCollided) {
-            return;
-        }
-            
-        // TODO: do this without mutability
+
         for (Brick brick: game.bricks) {
             if (brick.isActive) {
-                result = checkForCollision(game.ball, brick.dimension);
-                if (result.isCollided) {
+                result = checkForCollision(game.ball, brick.points);
+                if (result != null) {
+                    game.ball.velocity = result;
                     brick.isActive = false;
                     game.score++;
                     if (game.score == 50) {
@@ -486,7 +432,8 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
     
             resetDrawingArea(g2d, dim);
             g2d.setPaint(game.ball.color);
-            g2d.fill(new Ellipse2D.Double(game.ball.center.x, game.ball.center.y, game.ball.radius, game.ball.radius));
+            g2d.fill(new Ellipse2D.Double(game.ball.center.x - game.ball.radius/2, game.ball.center.y - game.ball.radius/2,
+                                          game.ball.radius, game.ball.radius));
         } else {
             
             resetDrawingArea(g2d, dim);
@@ -533,15 +480,20 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
 
     @Override
     public void mouseMoved(final MouseEvent event) {
-        if (event.getX() >= 0 && event.getX() <= getSize().width * (1 - game.pad.dimension.width)) {
-            game.pad.dimension.x = (double)event.getX() / getSize().width;
+        if (inRange(event.getX(), 0, getSize().width * (1 - game.pad.dimension.width))) {
+            
+            double diff = (double)event.getX() / getSize().width - game.pad.dimension.x;
+            game.pad.dimension.x += diff;
+            
+            for (Point2D.Double point: game.pad.points) {
+                point.x += diff;
+            }
         }
     }
 
     @Override
     public void mouseClicked(MouseEvent e) {
-        // TODO: add starting on click
-        // game.ball.velocity = BALL_VELOCITY;
+        game.ball.velocity = BALL_START_VELOCITY;
     }
 
     @Override
