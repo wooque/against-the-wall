@@ -358,7 +358,7 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
             game.ball.ballCenterHistory.pop();
         game.ball.center = newBallCenter;
         
-        if (game.ball.center.y + game.ball.radius/2 >= 1) {
+        if (Eq(game.ball.center.y + game.ball.radius/2, 1, RANGE)) {
             game.gameOver = true;
             game.ball.velocity = new Point2D.Double(0, 0);
             return;
@@ -399,10 +399,12 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
                     break;
                 }
             } else {
-               brick.dimension.x += 0.001;
-               brick.dimension.y += 0.001;
-               brick.dimension.height -= 0.002;
-               brick.dimension.width -= 0.002;
+                if (brick.dimension.width != 0 && brick.dimension.height != 0) {
+                    brick.dimension.x += 0.001;
+                    brick.dimension.y += 0.001;
+                    brick.dimension.height -= 0.002;
+                    brick.dimension.width -= 0.002;
+                }
             }
         }
     }
