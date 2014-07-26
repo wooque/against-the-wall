@@ -422,9 +422,6 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
 
         Dimension dim = getSize();
         Graphics2D g2d = (Graphics2D) g;
-        
-        // TODO: do dynamic range
-        // RANGE = 1.0 / dim.height;
 
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         
@@ -462,7 +459,7 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
             resetDrawingArea(g2d, dim);
             for (int i = 0; i < game.ball.ballCenterHistory.size() - 1; i++) {
                 g2d.setStroke(new BasicStroke((float)(0.8*game.ball.radius)));
-                g2d.setPaint(new Color(1.0f, 1.0f, 1.0f, (float)(0.25*i/game.ball.ballCenterHistory.size())));
+                g2d.setPaint(new Color(1.0f, 1.0f, 1.0f, (float)(0.10*i/game.ball.ballCenterHistory.size())));
                 g2d.draw(new Line2D.Double(game.ball.ballCenterHistory.get(i), game.ball.ballCenterHistory.get(i+1)));
             }
             
