@@ -162,17 +162,19 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
         public final ArrayList<Brick> bricks;
         public final Pad pad;
         public final Ball ball;
+        public final Point2D.Double ballStartVelocity;
         public final ArrayList<Point2D.Double> edge;
         public boolean gameOver;
         public int score;
         
         public Game(final Sky sky, final Wall wall, final ArrayList<Color> rowColors, final Color brickEdgeColor,
-                    final Stroke brickEdgeStroke, final Pad pad, final Ball ball) {
+                    final Stroke brickEdgeStroke, final Pad pad, final Ball ball, final Point2D.Double ballStartVelocity) {
             this.sky = sky;
             this.bricks = getBrickWall(wall, rowColors);
             Brick.initEdge(brickEdgeColor, brickEdgeStroke);
             this.pad = pad;
             this.ball = ball;
+            this.ballStartVelocity = ballStartVelocity;
             this.edge = new ArrayList<Point2D.Double>();
             this.edge.add(new Point2D.Double(0, 0));
             this.edge.add(new Point2D.Double(1, 0));
@@ -204,22 +206,17 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
         
         double ballRadius = 1.0/40.0;
         Point2D.Double ballDimension = new Point2D.Double(0.5, 1 - padHeight - ballRadius/2);
-        Point2D.Double ballVelocity = new Point2D.Double(0, 0);
+        double start = -Math.PI * Math.random();
         Paint ballColor = new GradientPaint((float)(-ballRadius/2), (float)(-ballRadius/2),
                                             new Color(0xff6961), (float)ballRadius, (float)ballRadius, new Color(0xfdfd96));
-        Ball ball = new Ball(ballDimension, ballRadius, ballVelocity, 0.1, ballColor);
+        Ball ball = new Ball(ballDimension, ballRadius, new Point2D.Double(0, 0), 0.1, ballColor);
+
+        Point2D.Double ballStartVelocity = new Point2D.Double(0.01*Math.cos(start), 0.01*Math.sin(start));
         
-        return new Game(sky, wall, rowColors, brickEdgeColor, brickEdgeStroke, pad, ball);
+        return new Game(sky, wall, rowColors, brickEdgeColor, brickEdgeStroke, pad, ball, ballStartVelocity);
     }
     
-    public static Point2D.Double BALL_START_VELOCITY;
-    
-    static {
-        double start = -Math.PI * Math.random();
-        BALL_START_VELOCITY = new Point2D.Double(0.01*Math.cos(start), 0.01*Math.sin(start));
-    }
-    
-    public static final double RANGE = 0.001;
+    public static final double RANGE = 0.0025;
     
     public static boolean inRange(double x, double barrier1, double barrier2) {
         
@@ -557,10 +554,10 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
     public void mouseMoved(final MouseEvent event) {
         
         if (inRange(event.getX(),
-                    getSize().width * game.pad.edge.width/2,
-                    getSize().width * (1 - game.pad.dimension.width - game.pad.edge.width/2))) {
+                    getSize().width * (game.pad.dimension.width/2 + game.pad.edge.width/2),
+                    getSize().width * (1 - game.pad.dimension.width/2 - game.pad.edge.width/2))) {
             
-            double diff = (double)event.getX() / getSize().width - game.pad.dimension.x;
+            double diff = (double)event.getX() / getSize().width - (game.pad.dimension.x + game.pad.dimension.width/2);
             game.pad.dimension.x += diff;
             
             for (Circle circle: game.pad.edges) {
@@ -576,7 +573,7 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
     @Override
     public void mouseClicked(MouseEvent e) {
         if (game.ball.velocity.equals(new Point2D.Double(0, 0)) && !game.gameOver) {
-            game.ball.velocity = BALL_START_VELOCITY;
+            game.ball.velocity = game.ballStartVelocity;
         } else {
             game = initGame();
         }
