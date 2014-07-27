@@ -385,6 +385,9 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
 
     private void passTime(Game game, double time) {
         
+        if (game == null) 
+            return;
+        
         for (Star star: game.sky.stars) {
             star.position.x += star.velocity * time;
             if (star.position.x >= 1.0) {
@@ -460,6 +463,9 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
+        
+        if (game == null)
+            return;
 
         Dimension dim = getSize();
         Graphics2D g2d = (Graphics2D) g;
@@ -561,29 +567,33 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
     @Override
     public void mouseMoved(final MouseEvent event) {
         
-        if (inRange(event.getX(),
-                    getSize().width * (game.pad.dimension.width/2 + game.pad.edge.width/2),
-                    getSize().width * (1 - game.pad.dimension.width/2 - game.pad.edge.width/2))) {
-            
-            double diff = (double)event.getX() / getSize().width - (game.pad.dimension.x + game.pad.dimension.width/2);
-            game.pad.dimension.x += diff;
-            
-            for (Circle circle: game.pad.edges) {
-                circle.center.x += diff;
-            }
-            
-            for (Point2D.Double point: game.pad.points) {
-                point.x += diff;
+        if (game != null) {
+            if (inRange(event.getX(),
+                        getSize().width * (game.pad.dimension.width/2 + game.pad.edge.width/2),
+                        getSize().width * (1 - game.pad.dimension.width/2 - game.pad.edge.width/2))) {
+                
+                double diff = (double)event.getX() / getSize().width - (game.pad.dimension.x + game.pad.dimension.width/2);
+                game.pad.dimension.x += diff;
+                
+                for (Circle circle: game.pad.edges) {
+                    circle.center.x += diff;
+                }
+                
+                for (Point2D.Double point: game.pad.points) {
+                    point.x += diff;
+                }
             }
         }
     }
 
     @Override
     public void mouseClicked(MouseEvent e) {
-        if (game.ball.velocity.equals(new Point2D.Double(0, 0)) && !game.gameOver) {
-            game.ball.velocity = game.ballStartVelocity;
-        } else {
-            game = initGame();
+        if (game != null) {
+            if (game.ball.velocity.equals(new Point2D.Double(0, 0)) && !game.gameOver) {
+                game.ball.velocity = game.ballStartVelocity;
+            } else {
+                game = initGame();
+            }
         }
     }
 
