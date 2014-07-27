@@ -1,29 +1,12 @@
 package againstthewall;
 
-import java.awt.BasicStroke;
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.FontMetrics;
-import java.awt.GradientPaint;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.Paint;
-import java.awt.RenderingHints;
-import java.awt.Stroke;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
-import java.awt.event.MouseMotionListener;
-import java.awt.geom.AffineTransform;
-import java.awt.geom.Line2D;
-import java.awt.geom.Point2D;
-import java.awt.geom.Rectangle2D;
-import java.awt.geom.Ellipse2D;
+import java.awt.*;
+import java.awt.event.*;
+import java.awt.geom.*;
 import java.util.ArrayList;
 import java.util.LinkedList;
 
-import javax.swing.JFrame;
-import javax.swing.JPanel;
-import javax.swing.SwingUtilities;
+import javax.swing.*;
 
 @SuppressWarnings("serial")
 public class Main extends JPanel implements Runnable, MouseMotionListener, MouseListener {
@@ -79,6 +62,7 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
     }
     
     public static class Star {
+        
         public Point2D.Double position;
         public double velocity;
         
@@ -89,6 +73,7 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
     }
     
     public static class Sky {
+        
         public final Color color;
         public final Color starColor;
         public final Ellipse2D.Double starShape;
@@ -137,23 +122,42 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
         return bricks;
     }
     
+    public static final class Circle {
+        
+        public final Point2D.Double center;
+        public final double radius;
+        
+        public Circle(final Point2D.Double center, double radius) {
+            this.center = center;
+            this.radius = radius;
+        }
+    }
+    
     public static final class Pad {
+        
         public final Rectangle2D.Double dimension;
+        public final Ellipse2D.Double edge;
         public final ArrayList<Point2D.Double> points;
+        public final Circle[] edges;
         public final Color color;
         
         public Pad(final Rectangle2D.Double dimension, final Color color) {
             this.dimension = dimension;
+            this.edge = new Ellipse2D.Double(0,0,dimension.height, dimension.height);
             this.points = new ArrayList<Point2D.Double>();
             this.points.add(new Point2D.Double(dimension.x, dimension.y));
             this.points.add(new Point2D.Double(dimension.x + dimension.width, dimension.y));
             this.points.add(new Point2D.Double(dimension.x + dimension.width, dimension.y + dimension.height));
             this.points.add(new Point2D.Double(dimension.x, dimension.y + dimension.height));
+            Circle edge1 = new Circle(new Point2D.Double(dimension.x, dimension.y + dimension.height/2), dimension.height);
+            Circle edge2 = new Circle(new Point2D.Double(dimension.x + dimension.width, dimension.y + dimension.height), dimension.height);
+            this.edges = new Circle[]{edge1, edge2};
             this.color = color;
         }
     }
     
     public static final class Game {
+        
         public final Sky sky;
         public final ArrayList<Brick> bricks;
         public final Pad pad;
@@ -180,6 +184,7 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
     }
     
     public static Game initGame() {
+        
         Sky sky = new Sky(new Color(0x11110e), Color.WHITE, new Ellipse2D.Double(0, 0, 1.0/250.0, 1.0/250.0), 100);
         Wall wall = new Wall(5, 10, 0.1, 0.5);
         
@@ -207,7 +212,13 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
         return new Game(sky, wall, rowColors, brickEdgeColor, brickEdgeStroke, pad, ball);
     }
     
-    public static final Point2D.Double BALL_START_VELOCITY = new Point2D.Double(0.005, -0.01);
+    public static Point2D.Double BALL_START_VELOCITY;
+    
+    static {
+        double start = -Math.PI * Math.random();
+        BALL_START_VELOCITY = new Point2D.Double(0.01*Math.cos(start), 0.01*Math.sin(start));
+    }
+    
     public static final double RANGE = 0.001;
     
     public static boolean inRange(double x, double barrier1, double barrier2) {
@@ -327,14 +338,7 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
         }
     }
     
-    private Point2D.Double checkForCollision(Ball ball, ArrayList<Point2D.Double> points) {
-        
-        for (Point2D.Double point: points) {
-            Point2D.Double result = checkAndCollideEdge(ball, point);
-            if (result != null) {
-                return result;
-            }
-        }     
+    public Point2D.Double checkAndCollidePolygon(Ball ball, ArrayList<Point2D.Double> points) {    
         
         for (int i = 0; i < points.size(); i++) {
             Point2D.Double result = checkAndCollideSide(ball, points.get(i), points.get((i + 1) % points.size()));
@@ -343,19 +347,56 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
             }
         }
         
+        for (Point2D.Double point: points) {
+            Point2D.Double result = checkAndCollideEdge(ball, point);
+            if (result != null) {
+                return result;
+            }
+        } 
+        
         return null;
+    }
+    
+    public Point2D.Double checkAndCollideCircle(Ball ball, Circle circle) {
+        
+        double x = ball.center.x + ((ball.center.x-circle.center.x)*(ball.radius/(ball.radius + circle.radius)));
+        double y = ball.center.y + ((ball.center.y-circle.center.y)*(ball.radius/(ball.radius + circle.radius)));
+        Point2D.Double collisionPoint = new Point2D.Double(x, y);
+        
+        return checkAndCollideEdge(ball, collisionPoint);
+    }
+    
+    public Point2D.Double checkAndCollidePad(Ball ball, Pad pad) {
+        
+        for (Circle edge: pad.edges) {
+            Point2D.Double result = checkAndCollideCircle(ball, edge);
+            if (result != null) {
+                return result;
+            }
+        }
+        
+        return checkAndCollidePolygon(ball, pad.points);
     }
 
     private void passTime(Game game, double time) {
+        
+        for (Star star: game.sky.stars) {
+            star.position.x += star.velocity * time;
+            if (star.position.x >= 1.0) {
+                star.position.x = 0.0;
+            }
+        }
         
         if (intensity(game.ball.velocity) <= 0)
             return;
             
         Point2D.Double newBallCenter;  
         newBallCenter = add(game.ball.center, scale(game.ball.velocity, time));
+        
         game.ball.ballCenterHistory.add(game.ball.center);
         if (game.ball.ballCenterHistory.size() > 100)
             game.ball.ballCenterHistory.pop();
+        
         game.ball.center = newBallCenter;
         
         if (Eq(game.ball.center.y + game.ball.radius/2, 1, RANGE)) {
@@ -366,21 +407,14 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
 
         game.ball.angle += game.ball.rotationVelocity * time;
         game.ball.angle %= 2 * Math.PI;
-        
-        for (Star star: game.sky.stars) {
-            star.position.x += star.velocity * time;
-            if (star.position.x >= 1.0) {
-                star.position.x = 0.0;
-            }
-        }
              
-        Point2D.Double result = checkForCollision(game.ball, game.edge);
+        Point2D.Double result = checkAndCollidePolygon(game.ball, game.edge);
         if (result != null) {
             game.ball.velocity = result;
             return;
         }
         
-        result = checkForCollision(game.ball, game.pad.points);
+        result = checkAndCollidePad(game.ball, game.pad);
         if(result != null) {
             game.ball.velocity = result;
             return;
@@ -388,7 +422,7 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
 
         for (Brick brick: game.bricks) {
             if (brick.isActive) {
-                result = checkForCollision(game.ball, brick.points);
+                result = checkAndCollidePolygon(game.ball, brick.points);
                 if (result != null) {
                     game.ball.velocity = result;
                     brick.isActive = false;
@@ -409,7 +443,7 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
         }
     }
     
-    public static final Game game = initGame();
+    public static Game game = initGame();
 
     public static final AffineTransform ident = new AffineTransform();
     
@@ -429,11 +463,6 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
         
         g2d.setPaint(game.sky.color);
         g2d.fillRect(0, 0, dim.width, dim.height);
-        
-        if(!game.gameOver) {
-            g2d.setPaint(Color.WHITE);
-            g2d.drawString("Score: " + game.score, 0, g2d.getFontMetrics().getHeight());
-        }
 
         resetDrawingArea(g2d, dim);
         g2d.setPaint(game.sky.starColor);
@@ -444,6 +473,11 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
         }
 
         if (!game.gameOver) {
+
+            resetDrawingArea(g2d, dim);
+            g2d.scale(2.0/dim.width, 2.0/dim.height);
+            g2d.setPaint(Color.WHITE);
+            g2d.drawString("Score: " + game.score, 0, g2d.getFontMetrics().getHeight());
             
             for (Brick brick: game.bricks) {
                 resetDrawingArea(g2d, dim);
@@ -457,6 +491,10 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
             resetDrawingArea(g2d, dim);
             g2d.setPaint(game.pad.color);
             g2d.fill(game.pad.dimension);
+            g2d.translate(game.pad.dimension.x - game.pad.edge.width/2, game.pad.dimension.y);
+            g2d.fill(game.pad.edge);
+            g2d.translate(game.pad.dimension.width, 0);
+            g2d.fill(game.pad.edge);
     
             resetDrawingArea(g2d, dim);
             for (int i = 0; i < game.ball.ballCenterHistory.size() - 1; i++) {
@@ -474,16 +512,19 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
         } else {
             
             resetDrawingArea(g2d, dim);
-            g2d.translate(0.2, 0.3);
+            g2d.translate(0.5, 0.5);
             g2d.scale(5.0/dim.width, 5.0/dim.height);
             g2d.setPaint(Color.WHITE);
             FontMetrics fm = g2d.getFontMetrics();
-            int visina = fm.getHeight();
-            if (game.score < 50) {
-                g2d.drawString("GAME OVER", 0, visina);
-                g2d.drawString("Your score: " + game.score, 0, 2 * visina);
+            int height = fm.getHeight();
+            if (game.score < game.bricks.size()) {
+                int gameOverWidth = fm.stringWidth("GAME OVER");
+                int scoreWidth = fm.stringWidth("Your score: " + game.score);
+                g2d.drawString("GAME OVER", -gameOverWidth/2, -height);
+                g2d.drawString("Your score: " + game.score, -scoreWidth/2, 0);
             } else {
-                g2d.drawString("YOU WON", 0, visina);
+                int winWidth = fm.stringWidth("YOU WON");
+                g2d.drawString("YOU WON", -winWidth/2, -height/2);
             }
         }
         
@@ -495,10 +536,8 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
 
         while (true) {
             starttime = System.currentTimeMillis();
-            for(int i = 0; i < 10 && !game.gameOver; i++) {
+            for(int i = 0; i < 10; i++) {
                 passTime(game, 0.1);
-                if (game.gameOver)
-                    break;
             }
             repaint();
             starttime += 40;
@@ -516,10 +555,17 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
 
     @Override
     public void mouseMoved(final MouseEvent event) {
-        if (inRange(event.getX(), 0, getSize().width * (1 - game.pad.dimension.width))) {
+        
+        if (inRange(event.getX(),
+                    getSize().width * game.pad.edge.width/2,
+                    getSize().width * (1 - game.pad.dimension.width - game.pad.edge.width/2))) {
             
             double diff = (double)event.getX() / getSize().width - game.pad.dimension.x;
             game.pad.dimension.x += diff;
+            
+            for (Circle circle: game.pad.edges) {
+                circle.center.x += diff;
+            }
             
             for (Point2D.Double point: game.pad.points) {
                 point.x += diff;
@@ -529,7 +575,11 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
 
     @Override
     public void mouseClicked(MouseEvent e) {
-        game.ball.velocity = BALL_START_VELOCITY;
+        if (game.ball.velocity.equals(new Point2D.Double(0, 0)) && !game.gameOver) {
+            game.ball.velocity = BALL_START_VELOCITY;
+        } else {
+            game = initGame();
+        }
     }
 
     @Override
