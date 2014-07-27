@@ -234,8 +234,16 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
         return (x >= low) && (x <= high);
     }
     
-    public static boolean Eq(double a, double b, double range) {
+    public static boolean EQ(double a, double b, double range) {
         return inRange(a, b - range/2, b + range/2);
+    }
+    
+    public static boolean LSE(double a, double b, double range) {
+        return inRange(a, b - range, b );
+    }
+    
+    public static boolean GRE(double a, double b, double range) {
+        return inRange(a, b, b + range);
     }
     
     public static double distance(double x, double y) {
@@ -297,7 +305,7 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
     
     public static Point2D.Double checkAndCollideEdge(final Ball ball, final Point2D.Double edge) {
         
-        boolean isCollided = Eq(distance(ball.center, edge), ball.radius/2, RANGE);
+        boolean isCollided = LSE(distance(ball.center, edge), ball.radius/2, RANGE);
         if (isCollided) {
             return collide(ball, edge);
         } else {
@@ -309,7 +317,7 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
         
         if (a.y == b.y) {
             
-            boolean isCollided = (Eq(distance(ball.center.y, a.y), ball.radius/2, RANGE)
+            boolean isCollided = (EQ(distance(ball.center.y, a.y), ball.radius/2, RANGE)
                                   && inRange(ball.center.x, a.x, b.x));
 
             if (isCollided) {
@@ -320,7 +328,7 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
             
         } else if (a.x == b.x) {
             
-            boolean isCollided = (Eq(distance(ball.center.x, a.x), ball.radius/2, RANGE)
+            boolean isCollided = (EQ(distance(ball.center.x, a.x), ball.radius/2, RANGE)
                                   && inRange(ball.center.y, a.y, b.y));
 
             if (isCollided) {
@@ -396,7 +404,7 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
         
         game.ball.center = newBallCenter;
         
-        if (Eq(game.ball.center.y + game.ball.radius/2, 1, RANGE)) {
+        if (GRE(game.ball.center.y + game.ball.radius/2, 1, RANGE)) {
             game.gameOver = true;
             game.ball.velocity = new Point2D.Double(0, 0);
             return;
