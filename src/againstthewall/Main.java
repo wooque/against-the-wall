@@ -383,7 +383,7 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
         return checkAndCollidePolygon(ball, pad.points);
     }
 
-    private void passTime(Game game, double time) {
+    public void passTime(Game game, double time) {
         
         if (game == null) 
             return;
