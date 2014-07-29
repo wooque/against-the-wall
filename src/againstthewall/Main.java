@@ -343,7 +343,7 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
         }
     }
     
-    public Point2D.Double checkAndCollidePolygon(Ball ball, ArrayList<Point2D.Double> points) {    
+    public static Point2D.Double checkAndCollidePolygon(Ball ball, ArrayList<Point2D.Double> points) {    
         
         for (int i = 0; i < points.size(); i++) {
             Point2D.Double result = checkAndCollideSide(ball, points.get(i), points.get((i + 1) % points.size()));
@@ -362,7 +362,7 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
         return null;
     }
     
-    public Point2D.Double checkAndCollideCircle(Ball ball, Circle circle) {
+    public static Point2D.Double checkAndCollideCircle(Ball ball, Circle circle) {
         
         double x = ball.center.x + ((ball.center.x-circle.center.x)*(ball.radius/(ball.radius + circle.radius)));
         double y = ball.center.y + ((ball.center.y-circle.center.y)*(ball.radius/(ball.radius + circle.radius)));
@@ -371,7 +371,7 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
         return checkAndCollideEdge(ball, collisionPoint);
     }
     
-    public Point2D.Double checkAndCollidePad(Ball ball, Pad pad) {
+    public static Point2D.Double checkAndCollidePad(Ball ball, Pad pad) {
         
         for (Circle edge: pad.edges) {
             Point2D.Double result = checkAndCollideCircle(ball, edge);
@@ -383,7 +383,7 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
         return checkAndCollidePolygon(ball, pad.points);
     }
 
-    public void passTime(Game game, double time) {
+    public static void passTime(Game game, double time) {
         
         if (game == null) 
             return;
