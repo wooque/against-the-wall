@@ -317,7 +317,7 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
         
         if (a.y == b.y) {
             
-            boolean isCollided = (EQ(distance(ball.center.y, a.y), ball.radius/2, RANGE)
+            boolean isCollided = (LSE(distance(ball.center.y, a.y), ball.radius/2, RANGE)
                                   && inRange(ball.center.x, a.x, b.x));
 
             if (isCollided) {
@@ -328,7 +328,7 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
             
         } else if (a.x == b.x) {
             
-            boolean isCollided = (EQ(distance(ball.center.x, a.x), ball.radius/2, RANGE)
+            boolean isCollided = (LSE(distance(ball.center.x, a.x), ball.radius/2, RANGE)
                                   && inRange(ball.center.y, a.y, b.y));
 
             if (isCollided) {
@@ -400,7 +400,7 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
             
         Point2D.Double newBallCenter;  
         newBallCenter = add(game.ball.center, scale(game.ball.velocity, time));
-        
+
         game.ball.ballCenterHistory.add(game.ball.center);
         if (game.ball.ballCenterHistory.size() > 100)
             game.ball.ballCenterHistory.pop();
