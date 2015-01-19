@@ -3,6 +3,8 @@ package againstthewall;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.*;
+import java.io.IOException;
+import java.util.Collections;
 
 import javax.swing.*;
 
@@ -12,6 +14,7 @@ import againstthewall.GameData.*;
 public class Main extends JPanel implements Runnable, MouseMotionListener, MouseListener {
     
     public static final double RANGE = 0.0025;
+    public static Game game = GameUtil.initGame();
     
     public static void passTime(Game game, double time) {
         
@@ -80,8 +83,6 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
             }
         }
     }
-    
-    public static Game game = GameUtil.initGame();
 
     public static final AffineTransform ident = new AffineTransform();
     
@@ -158,12 +159,30 @@ public class Main extends JPanel implements Runnable, MouseMotionListener, Mouse
             g2d.setPaint(Color.WHITE);
             FontMetrics fm = g2d.getFontMetrics();
             int height = fm.getHeight();
+            
+            if (game.dirtyScores) {
+	            game.scores.add(game.score);
+	            Collections.sort(game.scores, Collections.reverseOrder());
+	            try {
+					HighScoreData.saveHighScore(game.scores);
+				} catch (IOException e) {
+					System.err.println("Unable to save score");
+				}
+	            game.dirtyScores = false;
+            }
+            
             if (game.score < game.bricks.size()) {
+            	
                 int gameOverWidth = fm.stringWidth("GAME OVER");
                 int scoreWidth = fm.stringWidth("Your score: " + game.score);
-                g2d.drawString("GAME OVER", -gameOverWidth/2, -height);
-                g2d.drawString("Your score: " + game.score, -scoreWidth/2, 0);
+                int highScoreWidth = fm.stringWidth("1. 99");
+                g2d.drawString("GAME OVER", -gameOverWidth/2, -height*2);
+                g2d.drawString("Your score: " + game.score, -scoreWidth/2, -height);
+                for(int i = 0; i < game.scores.size() && i < 3; i++) {
+                	g2d.drawString((i+1) + ". " + game.scores.get(i), -highScoreWidth/2, height*i);
+                }
             } else {
+            	
                 int winWidth = fm.stringWidth("YOU WON");
                 g2d.drawString("YOU WON", -winWidth/2, -height/2);
             }

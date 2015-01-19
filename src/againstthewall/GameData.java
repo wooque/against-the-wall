@@ -6,6 +6,7 @@ import java.awt.Stroke;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 
@@ -149,6 +150,8 @@ public class GameData {
         public final ArrayList<Point2D.Double> edge;
         public boolean gameOver;
         public int score;
+        public ArrayList<Integer> scores;
+        public boolean dirtyScores;
         
         public Game(final Sky sky, final Wall wall, final ArrayList<Color> rowColors, final Color brickEdgeColor,
                     final Stroke brickEdgeStroke, final Pad pad, final Ball ball, final Point2D.Double ballStartVelocity) {
@@ -165,6 +168,11 @@ public class GameData {
             this.edge.add(new Point2D.Double(0, 1));
             this.gameOver = false;
             this.score = 0;
+            this.scores = new ArrayList<>();
+            try {
+				scores.addAll(HighScoreData.loadHighScoreData());
+			} catch (IOException e) {}
+            this.dirtyScores = true;
         }
     }
 }
